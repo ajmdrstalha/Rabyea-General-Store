@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>রাবেয়া জেনারেল স্টোর - Sales Calculator</title>
+  <style>
+    :root{
+      --bg:#fff;
+      --text:#000;
+      --accent:#1976d2;
+      --border:#d9d9d9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:16px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans Bengali", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    h1{
+      margin:0 0 12px;
+      font-size:24px;
+      color:var(--accent);
+      text-align:center;
+    }
+    .container{max-width:980px;margin:0 auto;}
+    .field{
+      margin:8px 0 12px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .field label{font-weight:600;min-width:90px;}
+    .field input{
+      flex:1;padding:10px 12px;border:1px solid var(--border);
+      border-radius:8px;font-size:16px;
+    }
+    table{width:100%;border-collapse:collapse;margin:12px 0;}
+    th, td{border:1px solid var(--border);padding:8px;text-align:center;vertical-align:middle;}
+    th{background:#f5f8ff;color:#0b3d91;font-weight:700;}
+    .qty-controls{display:flex;justify-content:center;align-items:center;gap:8px;}
+    .btn{
+      border:none;background:var(--accent);color:white;padding:8px 14px;border-radius:8px;
+      font-size:16px;cursor:pointer;
+    }
+    .btn:active{transform:scale(0.98)}
+    .btn-small{padding:6px 10px;font-size:18px;width:44px;height:40px;}
+    .qty{min-width:60px;font-weight:700;}
+    .footer{
+      display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-top:12px;
+    }
+    .total-box{font-size:20px;font-weight:800;color:#0b3d91;}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;}
+    .due-row{
+      margin-top:8px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .due-row label{
+      font-weight:700;
+      min-width:60px;
+    }
+    .due-row input{
+      flex:1;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      font-size:16px;
+    }
+    #pdfHeaderLine{
+      font-weight:700;
+      margin:6px 0 10px;
+    }
+    @media (max-width:640px){
+      th, td{font-size:14px;padding:6px}
+      .btn{font-size:14px}
+      .btn-small{font-size:16px;width:40px;height:36px}
+      .field label{min-width:70px}
+    }
+
+    /* PDF capture wrapper */
+    #pdfArea{
+      background:#fff;
+      padding:12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="pdfArea">
+    <h1>রাবেয়া জেনারেল স্টোর</h1>
+
+    <div class="field">
+      <label for="dsrName">DSR Name</label>
+      <input id="dsrName" type="text" placeholder="Enter DSR Name" />
+    </div>
+
+    <div class="field">
+      <label for="saleDate">Date</label>
+      <input id="saleDate" type="date" />
+    </div>
+
+    <!-- PDF‑friendly header line -->
+    <div id="pdfHeaderLine">
+      DSR Name: <span id="dsrText">-</span> | Date: <span id="dateText">-</span>
+    </div>
+
+    <table id="productTable">
+      <thead>
+        <tr>
+          <th>Product Name (Bangla)</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="footer">
+      <div class="total-box">Grand Total: <span id="grandTotal">0</span></div>
+      <div class="actions">
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="pdfBtn">Generate PDF</button>
+      </div>
+    </div>
+
+    <div class="due-row">
+      <label for="dueAmount">Due</label>
+      <input id="dueAmount" type="number" min="0" step="1" placeholder="Enter due amount" />
+    </div>
+  </div>
+
+  <!-- jsPDF + html2canvas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    const products = [
+      ["ব্রেড ৭০০ গ্রাম", 372],
+      ["ব্রেড ৩৫০ গ্রাম", 405],
+      ["ব্রেড ২৫০ গ্রাম", 312],
+      ["ব্রেড ১৫০ গ্রাম", 320],
+      ["ব্রেড ৩০০ গ্রাম", 460],
+      ["ফেসবান", 480],
+      ["বাটারবান", 900],
+      ["মেগা বাটার", 550],
+      ["ভেনিলা বান", 900],
+      ["চকোলেট বান", 900],
+      ["হানিকম", 550],
+      ["ফ্যামেলি কেক", 1380],
+      ["স্লাইস কেক", 940],
+      ["মেঘা লুস", 410],
+      ["ক্রিম রোল", 685],
+      ["সেন্ডুস কেক", 540],
+      ["ক্রিম ফিল", 540],
+      ["ফ্রুট কেক", 960],
+      ["প্লেন কেক", 820],
+      ["মুরব্বা বান", 343],
+      ["ডোনাট", 830],
+      ["ঘি টোস্ট", 940],
+      ["ঘি পাতা", 720],
+      ["রাস্ক টোস্ট", 310],
+      ["রোমা", 940],
+      ["পিলো", 360],
+      ["লেয়ার কেক", 270],
+      ["বিস্কিট", 180],
+      ["মামা", 460],
+      ["ড্রাই কেক P", 540],
+      ["কুকিস", 670],
+      ["সেরো", 552],
+      ["জাম ব্রেড", 364],
+      ["পাই কেক", 830],
+      ["রোমা বড়", 1340]
+    ];
+
+    const tbody = document.querySelector("#productTable tbody");
+    const grandTotalEl = document.getElementById("grandTotal");
+    const dsrInput = document.getElementById("dsrName");
+    const dateInput = document.getElementById("saleDate");
+    const dsrText = document.getElementById("dsrText");
+    const dateText = document.getElementById("dateText");
+
+    function formatNumber(n){
+      return Number(n).toFixed(2).replace(/\.00$/,'');
+    }
+
+    function renderTable(){
+      tbody.innerHTML = "";
+      products.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p[0]}</td>
+          <td>${p[1]}</td>
+          <td>
+            <div class="qty-controls">
+              <button class="btn btn-small" data-action="dec" data-index="${idx}">−</button>
+              <span class="qty" id="qty-${idx}">0</span>
+              <button class="btn btn-small" data-action="inc" data-index="${idx}">+</button>
+            </div>
+          </td>
+          <td><span id="total-${idx}">0</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateTotals(){
+      let grand = 0;
+      products.forEach((p, idx) => {
+        const qty = parseFloat(document.getElementById(`qty-${idx}`).textContent) || 0;
+        const total = p[1] * qty;
+        document.getElementById(`total-${idx}`).textContent = formatNumber(total);
+        grand += total;
+      });
+      grandTotalEl.textContent = formatNumber(grand);
+    }
+
+    function syncHeader(){
+      dsrText.textContent = dsrInput.value || "-";
+      dateText.textContent = dateInput.value || "-";
+    }
+
+    dsrInput.addEventListener("input", syncHeader);
+    dateInput.addEventListener("change", syncHeader);
+
+    tbody.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if(!btn) return;
+      const idx = btn.dataset.index;
+      const action = btn.dataset.action;
+      const qtyEl = document.getElementById(`qty-${idx}`);
+      let qty = parseFloat(qtyEl.textContent) || 0;
+      if(action === "inc") qty += 0.5;
+      if(action === "dec") qty = Math.max(0, qty - 0.5);
+      qtyEl.textContent = formatNumber(qty);
+      updateTotals();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      products.forEach((_, idx) => {
+        document.getElementById(`qty-${idx}`).textContent = "0";
+        document.getElementById(`total-${idx}`).textContent = "0";
+      });
+      updateTotals();
+      document.getElementById("dueAmount").value = "";
+      dateInput.value = "";
+      dsrInput.value = "";
+      syncHeader();
+    });
+
+    // PDF as image (বাংলা ঠিক থাকবে)
+    document.getElementById("pdfBtn").addEventListener("click", async () => {
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfArea = document.getElementById("pdfArea");
+
+      syncHeader(); // ensure latest DSR/Date are visible
+
+      const canvas = await html2canvas(pdfArea, {
+        scale: 2,
+        backgroundColor: "#ffffff"
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pageWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      if (imgHeight <= pageHeight) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      } else {
+        let remainingHeight = imgHeight;
+        let position = 0;
+
+        while (remainingHeight > 0) {
+          pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+          remainingHeight -= pageHeight;
+          position -= pageHeight;
+          if (remainingHeight > 0) pdf.addPage();
+        }
+      }
+
+      const safeName = (dsrInput.value || "DSR").replace(/[^a-z0-9-_]/gi, "_");
+      const safeDate = (dateInput.value || "date");
+      pdf.save(`${safeName}_${safeDate}.pdf`);
+    });
+
+    renderTable();
+    updateTotals();
+    syncHeader();
+  </script>
+</body>
+</html>
