@@ -53,17 +53,17 @@
     }
     .total-box{font-size:20px;font-weight:800;color:#0b3d91;}
     .actions{display:flex;gap:10px;flex-wrap:wrap;}
-    .due-row{
+    .money-row{
       margin-top:8px;
       display:flex;
       align-items:center;
       gap:8px;
     }
-    .due-row label{
+    .money-row label{
       font-weight:700;
-      min-width:60px;
+      min-width:80px;
     }
-    .due-row input{
+    .money-row input{
       flex:1;
       padding:10px 12px;
       border:1px solid var(--border);
@@ -127,9 +127,19 @@
       </div>
     </div>
 
-    <div class="due-row">
+    <div class="money-row">
+      <label>2% Total</label>
+        <div class="total-box" id="twoPercentTotal">0.00</div>
+    </div>
+
+    <div class="money-row">
+      <label for="depositAmount">Deposit</label>
+      <input id="depositAmount" type="number" min="0" step="0.01" placeholder="Enter deposit amount" />
+    </div>
+
+    <div class="money-row">
       <label for="dueAmount">Due</label>
-      <input id="dueAmount" type="number" min="0" step="1" placeholder="Enter due amount" />
+      <input id="dueAmount" type="number" min="0" step="0.01" placeholder="Enter due amount" />
     </div>
   </div>
 
@@ -178,13 +188,14 @@
 
     const tbody = document.querySelector("#productTable tbody");
     const grandTotalEl = document.getElementById("grandTotal");
+    const twoPercentEl = document.getElementById("twoPercentTotal");
     const dsrInput = document.getElementById("dsrName");
     const dateInput = document.getElementById("saleDate");
     const dsrText = document.getElementById("dsrText");
     const dateText = document.getElementById("dateText");
 
     function formatNumber(n){
-      return Number(n).toFixed(2).replace(/\.00$/,'');
+      return Number(n).toFixed(2);
     }
 
     function renderTable(){
@@ -201,7 +212,7 @@
               <button class="btn btn-small" data-action="inc" data-index="${idx}">+</button>
             </div>
           </td>
-          <td><span id="total-${idx}">0</span></td>
+          <td><span id="total-${idx}">0.00</span></td>
         `;
         tbody.appendChild(tr);
       });
@@ -216,6 +227,7 @@
         grand += total;
       });
       grandTotalEl.textContent = formatNumber(grand);
+      twoPercentEl.textContent = formatNumber(grand * 1.02);
     }
 
     function syncHeader(){
@@ -235,16 +247,17 @@
       let qty = parseFloat(qtyEl.textContent) || 0;
       if(action === "inc") qty += 0.5;
       if(action === "dec") qty = Math.max(0, qty - 0.5);
-      qtyEl.textContent = formatNumber(qty);
+      qtyEl.textContent = qty.toFixed(2).replace(/\.00$/,'').replace(/\.50$/,'.5');
       updateTotals();
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
       products.forEach((_, idx) => {
         document.getElementById(`qty-${idx}`).textContent = "0";
-        document.getElementById(`total-${idx}`).textContent = "0";
+        document.getElementById(`total-${idx}`).textContent = "0.00";
       });
       updateTotals();
+      document.getElementById("depositAmount").value = "";
       document.getElementById("dueAmount").value = "";
       dateInput.value = "";
       dsrInput.value = "";
@@ -257,7 +270,7 @@
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfArea = document.getElementById("pdfArea");
 
-      syncHeader(); // ensure latest DSR/Date are visible
+      syncHeader();
 
       const canvas = await html2canvas(pdfArea, {
         scale: 2,
