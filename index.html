@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>রাবেয়া জেনারেল স্টোর - Sales Calculator</title>
+  <style>
+    :root{
+      --bg:#fff;
+      --text:#000;
+      --accent:#1976d2;
+      --border:#d9d9d9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      padding:16px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans Bengali", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    h1{
+      margin:0 0 12px;
+      font-size:24px;
+      color:var(--accent);
+      text-align:center;
+    }
+    .container{
+      max-width:980px;
+      margin:0 auto;
+    }
+    .field{
+      margin:8px 0 16px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .field label{
+      font-weight:600;
+      min-width:90px;
+    }
+    .field input{
+      flex:1;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      font-size:16px;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin:12px 0;
+    }
+    th, td{
+      border:1px solid var(--border);
+      padding:8px;
+      text-align:center;
+      vertical-align:middle;
+    }
+    th{
+      background:#f5f8ff;
+      color:#0b3d91;
+      font-weight:700;
+    }
+    .qty-controls{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:8px;
+    }
+    .btn{
+      border:none;
+      background:var(--accent);
+      color:white;
+      padding:8px 14px;
+      border-radius:8px;
+      font-size:16px;
+      cursor:pointer;
+    }
+    .btn:active{transform:scale(0.98)}
+    .btn-small{
+      padding:6px 10px;
+      font-size:18px;
+      width:44px;
+      height:40px;
+    }
+    .qty{
+      min-width:60px;
+      font-weight:700;
+    }
+    .footer{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:12px;
+    }
+    .total-box{
+      font-size:20px;
+      font-weight:800;
+      color:#0b3d91;
+    }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    @media (max-width:640px){
+      th, td{font-size:14px; padding:6px}
+      .btn{font-size:14px}
+      .btn-small{font-size:16px; width:40px; height:36px}
+      .field label{min-width:70px}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>রাবেয়া জেনারেল স্টোর</h1>
+
+    <div class="field">
+      <label for="dsrName">DSR Name</label>
+      <input id="dsrName" type="text" placeholder="Enter DSR Name" />
+    </div>
+
+    <table id="productTable">
+      <thead>
+        <tr>
+          <th>Product Name (Bangla)</th>
+          <th>Price</th>
+          <th>Quantity</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <div class="footer">
+      <div class="total-box">Grand Total: <span id="grandTotal">0</span></div>
+      <div class="actions">
+        <button class="btn" id="resetBtn">Reset</button>
+        <button class="btn" id="pdfBtn">Generate PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- jsPDF CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <script>
+    const products = [
+      ["ব্রেড ৭০০ গ্রাম", 372],
+      ["ব্রেড ৩৫০ গ্রাম", 405],
+      ["ব্রেড ২৫০ গ্রাম", 312],
+      ["ব্রেড ১৫০ গ্রাম", 320],
+      ["ব্রেড ৩০০ গ্রাম", 460],
+      ["ফেসবান", 480],
+      ["বাটারবান", 900],
+      ["মেগা বাটার", 550],
+      ["ভেনিলা বান", 900],
+      ["চকোলেট বান", 900],
+      ["হানিকম", 550],
+      ["ফ্যামেলি কেক", 1380],
+      ["স্লাইস কেক", 940],
+      ["মেঘা লুস", 410],
+      ["ক্রিম রোল", 685],
+      ["সেন্ডুস কেক", 540],
+      ["ক্রিম ফিল", 540],
+      ["ফ্রুট কেক", 960],
+      ["প্লেন কেক", 820],
+      ["মুরব্বা বান", 343],
+      ["ডোনাট", 830],
+      ["ঘি টোস্ট", 940],
+      ["ঘি পাতা", 720],
+      ["রাস্ক টোস্ট", 310],
+      ["রোমা", 940],
+      ["পিলো", 360],
+      ["লেয়ার কেক", 270],
+      ["বিস্কিট", 180],
+      ["মামা", 460],
+      ["ড্রাই কেক P", 540],
+      ["কুকিস", 670],
+      ["সেরো", 552],
+      ["জাম ব্রেড", 364],
+      ["পাই কেক", 830],
+      ["রোমা বড়", 1340]
+    ];
+
+    const tbody = document.querySelector("#productTable tbody");
+    const grandTotalEl = document.getElementById("grandTotal");
+
+    function formatNumber(n){
+      return Number(n).toFixed(2).replace(/\.00$/,'');
+    }
+
+    function renderTable(){
+      tbody.innerHTML = "";
+      products.forEach((p, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p[0]}</td>
+          <td>${p[1]}</td>
+          <td>
+            <div class="qty-controls">
+              <button class="btn btn-small" data-action="dec" data-index="${idx}">−</button>
+              <span class="qty" id="qty-${idx}">0</span>
+              <button class="btn btn-small" data-action="inc" data-index="${idx}">+</button>
+            </div>
+          </td>
+          <td><span id="total-${idx}">0</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateTotals(){
+      let grand = 0;
+      products.forEach((p, idx) => {
+        const qty = parseFloat(document.getElementById(`qty-${idx}`).textContent) || 0;
+        const total = p[1] * qty;
+        document.getElementById(`total-${idx}`).textContent = formatNumber(total);
+        grand += total;
+      });
+      grandTotalEl.textContent = formatNumber(grand);
+    }
+
+    tbody.addEventListener("click", (e) => {
+      const btn = e.target.closest("button");
+      if(!btn) return;
+      const idx = btn.dataset.index;
+      const action = btn.dataset.action;
+      const qtyEl = document.getElementById(`qty-${idx}`);
+      let qty = parseFloat(qtyEl.textContent) || 0;
+      if(action === "inc") qty += 0.5;
+      if(action === "dec") qty = Math.max(0, qty - 0.5);
+      qtyEl.textContent = formatNumber(qty);
+      updateTotals();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      products.forEach((_, idx) => {
+        document.getElementById(`qty-${idx}`).textContent = "0";
+        document.getElementById(`total-${idx}`).textContent = "0";
+      });
+      updateTotals();
+    });
+
+    // === PDF + Bangla font support ===
+    // 1) Convert your TTF (e.g., NotoSansBengali-Regular.ttf or SolaimanLipi.ttf) to base64.
+    // 2) Paste the base64 string below (without quotes/newlines).
+    const FONT_BASE64 = "PASTE_YOUR_BASE64_TTF_HERE";
+
+    function loadBanglaFont(doc){
+      if (FONT_BASE64 && FONT_BASE64 !== "PASTE_YOUR_BASE64_TTF_HERE") {
+        doc.addFileToVFS("BanglaFont.ttf", FONT_BASE64);
+        doc.addFont("BanglaFont.ttf", "BanglaFont", "normal");
+        doc.setFont("BanglaFont");
+      }
+    }
+
+    document.getElementById("pdfBtn").addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF("p", "mm", "a4");
+
+      loadBanglaFont(doc);
+
+      let y = 12;
+      doc.setFontSize(16);
+      doc.text("রাবেয়া জেনারেল স্টোর", 10, y);
+
+      y += 8;
+      doc.setFontSize(12);
+      const dsr = document.getElementById("dsrName").value || "-";
+      doc.text(`DSR Name: ${dsr}`, 10, y);
+
+      y += 8;
+      doc.setFontSize(11);
+      doc.text("Product", 10, y);
+      doc.text("Price", 95, y);
+      doc.text("Qty", 120, y);
+      doc.text("Total", 150, y);
+
+      y += 4;
+      doc.line(10, y, 200, y);
+      y += 6;
+
+      products.forEach((p, idx) => {
+        const qty = document.getElementById(`qty-${idx}`).textContent;
+        const total = document.getElementById(`total-${idx}`).textContent;
+
+        doc.text(String(p[0]).slice(0, 34), 10, y);
+        doc.text(String(p[1]), 95, y);
+        doc.text(String(qty), 120, y);
+        doc.text(String(total), 150, y);
+        y += 6;
+
+        if(y > 280){
+          doc.addPage();
+          loadBanglaFont(doc);
+          y = 12;
+        }
+      });
+
+      y += 4;
+      doc.line(10, y, 200, y);
+      y += 8;
+      doc.setFontSize(13);
+      doc.text(`Grand Total: ${grandTotalEl.textContent}`, 10, y);
+
+      doc.save("sales-calculator.pdf");
+    });
+
+    renderTable();
+    updateTotals();
+  </script>
+</body>
+</html>
